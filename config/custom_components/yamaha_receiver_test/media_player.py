@@ -138,7 +138,7 @@ class YamahaZoneEntity(CoordinatorEntity[YamahaUpdateCoordinator], MediaPlayerEn
         available_inputs = getattr(self.zone, "available_inputs", None)
         if available_inputs is None:
             return None
-        return [input.name for input in available_inputs]
+        return [input.value for input in available_inputs]
 
     @property
     def sound_mode_list(self) -> list[str] | None:
@@ -146,7 +146,7 @@ class YamahaZoneEntity(CoordinatorEntity[YamahaUpdateCoordinator], MediaPlayerEn
         audio_programs = getattr(self.zone, "available_audio_programs", None)
         if audio_programs is None:
             return None
-        return [program.name for program in audio_programs]
+        return [program.value for program in audio_programs]
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -213,15 +213,15 @@ class YamahaZoneEntity(CoordinatorEntity[YamahaUpdateCoordinator], MediaPlayerEn
             return
 
         # Find the Input_Type enum value that matches the source name
-        available_inputs = getattr(self.zone, "available_inputs", [])
-        selected_input = None
-        for input_type in available_inputs:
-            if input_type.name == source:
-                selected_input = input_type
-                break
+        #available_inputs = getattr(self.zone, "available_inputs", [])
+        #selected_input = None
+        #for input_type in available_inputs:
+        #    if input_type.name == source:
+        #        selected_input = input_type
+        #        break
 
-        if selected_input is not None:
-            await self.zone.change_zone_input(receiver, selected_input)
+        if Input_Type(source) is not None:
+            await self.zone.change_zone_input(receiver, Input_Type(source))
             await self.coordinator.async_request_refresh()
         else:
             print(f"Source {source} not found in available inputs")
@@ -233,18 +233,24 @@ class YamahaZoneEntity(CoordinatorEntity[YamahaUpdateCoordinator], MediaPlayerEn
             return
 
         # Find the Audio_Program enum value that matches the audio program name
-        available_sound_modes = getattr(self.zone, "available_audio_programs", [])
-        selected_program = None
-        for program in available_sound_modes:
-            if program.name == sound_mode:
-                selected_program = program
-                break
+        #available_sound_modes = getattr(self.zone, "available_audio_programs", [])
+        #selected_program = None
+        #for program in available_sound_modes:
+        #    if program.name == sound_mode:
+        #        selected_program = program
+        #        break
 
-        if selected_program is not None:
-            await self.zone.change_zone_audio_setting(receiver, selected_program)
-            await self.coordinator.async_request_refresh()
-        else:
+        try:
+            Audio_Setting_Type(sound_mode)
+
+            if Audio_Setting_Type(sound_mode) is not None:
+                await self.zone.change_zone_audio_setting(receiver, Audio_Setting_Type(sound_mode))
+                await self.coordinator.async_request_refresh()
+            else:
+                print(f"Sound mode {sound_mode} not found in available programs")
+        except:
             print(f"Sound mode {sound_mode} not found in available programs")
+
 
     @property
     def unique_id(self) -> str:
