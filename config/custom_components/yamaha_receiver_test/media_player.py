@@ -37,7 +37,6 @@ async def async_setup_entry(
         ]
     )
 
-
 class YamahaZoneEntity(CoordinatorEntity[YamahaUpdateCoordinator], MediaPlayerEntity):
     """Represent a Yamaha receiver zone as a Home Assistant media player."""
 
@@ -49,7 +48,7 @@ class YamahaZoneEntity(CoordinatorEntity[YamahaUpdateCoordinator], MediaPlayerEn
         | MediaPlayerEntityFeature.VOLUME_SET
         | MediaPlayerEntityFeature.VOLUME_MUTE
         | MediaPlayerEntityFeature.SELECT_SOURCE
-        | MediaPlayerEntityFeature.SELECT_SOUND_MODE
+        #| MediaPlayerEntityFeature.SELECT_SOUND_MODE
     )
 
     def __init__(self, coordinator: YamahaUpdateCoordinator, zone_key: str) -> None:
@@ -59,6 +58,8 @@ class YamahaZoneEntity(CoordinatorEntity[YamahaUpdateCoordinator], MediaPlayerEn
         self._zone: Zone = coordinator.data[zone_key]
         self._attr_name = self._zone.zone_name.replace("_", " ")
         self._attr_unique_id = self._zone.zone_id
+        if self._zone.zone_name == "Main_Zone":
+            self._attr_supported_features = self._attr_supported_features | MediaPlayerEntityFeature.SELECT_SOUND_MODE
 
     @property
     def zone(self) -> Zone:
