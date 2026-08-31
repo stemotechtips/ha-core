@@ -410,6 +410,8 @@ per-file-ignores = [
   "tests/**:redefined-outer-name,use-implicit-booleaness-not-comparison",
 ]
 
+
+
 [tool.pylint.REPORTS]
 score = false
 
@@ -639,6 +641,7 @@ exclude_lines = [
 
 [tool.ruff]
 required-version = ">=0.16.4"
+extend-exclude = ["config/custom_components/yamaha_receiver_test"]
 
 [tool.ruff.lint]
 select = [
