@@ -17,6 +17,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .coordinator import YamahaUpdateCoordinator
 from .receiver_system import Zone
 from .helper_functions import *
+from .enums import *
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ class YamahaZoneEntity(CoordinatorEntity[YamahaUpdateCoordinator], MediaPlayerEn
         | MediaPlayerEntityFeature.VOLUME_SET
         | MediaPlayerEntityFeature.VOLUME_MUTE
         | MediaPlayerEntityFeature.SELECT_SOURCE
+        | MediaPlayerEntityFeature.SELECT_SOUND_MODE
     )
 
     def __init__(self, coordinator: YamahaUpdateCoordinator, zone_key: str) -> None:
@@ -98,6 +100,14 @@ class YamahaZoneEntity(CoordinatorEntity[YamahaUpdateCoordinator], MediaPlayerEn
         )
 
     @property
+    def sound_mode(self) -> str | None:
+        """Return the current audio program for the zone."""
+        audio_program = getattr(self.zone, "audio_program", None)
+        if audio_program is None:
+            return None
+        return getattr(audio_program, "selected_audio_program", None)
+
+    @property
     def volume_level(self) -> float | None:
         """Return the current volume as a normalized 0..1 value."""
         volume_status = getattr(self.zone, "volume_status", None)
@@ -128,6 +138,14 @@ class YamahaZoneEntity(CoordinatorEntity[YamahaUpdateCoordinator], MediaPlayerEn
         if available_inputs is None:
             return None
         return [input.name for input in available_inputs]
+
+    @property
+    def sound_mode_list(self) -> list[str] | None:
+        """Return list of available audio settings."""
+        audio_programs = getattr(self.zone, "available_audio_programs", None)
+        if audio_programs is None:
+            return None
+        return [program.name for program in audio_programs]
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -206,6 +224,26 @@ class YamahaZoneEntity(CoordinatorEntity[YamahaUpdateCoordinator], MediaPlayerEn
             await self.coordinator.async_request_refresh()
         else:
             print(f"Source {source} not found in available inputs")
+
+    async def async_select_sound_mode(self, sound_mode: str) -> None:
+        """Select an audio program for the zone."""
+        receiver = self.receiver
+        if receiver is None:
+            return
+
+        # Find the Audio_Program enum value that matches the audio program name
+        available_sound_modes = getattr(self.zone, "available_audio_programs", [])
+        selected_program = None
+        for program in available_sound_modes:
+            if program.name == sound_mode:
+                selected_program = program
+                break
+
+        if selected_program is not None:
+            await self.zone.change_zone_audio_setting(receiver, selected_program)
+            await self.coordinator.async_request_refresh()
+        else:
+            print(f"Sound mode {sound_mode} not found in available programs")
 
     @property
     def unique_id(self) -> str:

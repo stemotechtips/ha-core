@@ -25,6 +25,7 @@ class Receiver:
         self.system_ID = ""
         self.firmware_version = ""
         self.available_inputs = []
+        self.available_audio_programs = []
         self.main_zone = None
         self.zone_two = None
         self.zone_three = None
@@ -54,6 +55,7 @@ class Receiver:
 
         if self.model_name is not None and self.model_name == "RX-V3900":
             self.valid_setup = True
+            #[TO FIX] Currently this only returns true for the RX-V3900, but there is no reason why we couldn't extend this to the other models in the same family.
 
         if self.valid_setup:
             self.setup_devices()
@@ -75,6 +77,7 @@ class Receiver:
 
         # once we have initialised the devices we populate a list of available inputs
         self.populate_inputs()
+        self.populate_audio_programs()
 
     async def setup_zones(self):
         # There is a 'zone 4' specified in the Yamaha code, but it doesn't exist in the model tested
@@ -91,7 +94,6 @@ class Receiver:
         await self.zone_three.async_update_zone_status(self)
 
     def populate_inputs(self):
-        self.available_inputs = []
         for input in Input_Type:
             if (
                 input.name == Input_Type.SIRIUS.name
@@ -115,6 +117,22 @@ class Receiver:
                     self.available_inputs.append(input)
             else:
                 self.available_inputs.append(input)
+
+    def populate_audio_programs(self):
+        for program in Audio_Setting_Type:
+
+            if program.name == Audio_Setting_Type.STEREO_NINECH.name or program.name == Audio_Setting_Type.ENHANCER_9CH.name:
+                #These specific model names are built in to the Yamaha code, so we (probably) know that these are the only models that support 9 channels (in which case they are substituted for the 7 channel settings, as below).
+                if self.model_name == "RX-Z7" or self.model_name == "DSP_Z7":
+                    self.available_audio_programs.append(program)
+
+            elif program.name == Audio_Setting_Type.STEREO_SEVENCH.name or program.name == Audio_Setting_Type.ENHANCER_7CH.name:
+                #Again, these specific model names are built into the Yamaha code.
+                if self.model_name != "RX-Z7" and self.model_name != "DSP_Z7":
+                    self.available_audio_programs.append(program)
+
+            else:
+                self.available_audio_programs.append(program)
 
     async def change_zone_power(self, zone, desired_power_state):
         if isinstance(zone, Zone):
@@ -345,6 +363,7 @@ class Zone:
         self.exists = True
         self.is_on = False
         self.available_inputs = receiver.available_inputs
+        self.available_audio_programs = receiver.available_audio_programs
         self.volume_status = None
         self.input_status = None
         self.audio_program = None
