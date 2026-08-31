@@ -16,6 +16,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .coordinator import YamahaUpdateCoordinator
 from .receiver_system import Zone
+from .helper_functions import *
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -147,7 +148,7 @@ class YamahaZoneEntity(CoordinatorEntity[YamahaUpdateCoordinator], MediaPlayerEn
             await self.zone.change_zone_power(receiver, False)
             await self.coordinator.async_request_refresh()
 
-    async def async_set_volume_level(self, volume_level: float) -> None:
+    async def async_set_volume_level(self, **kwargs) -> None:
         """Set the zone volume."""
         receiver = self.receiver
         if receiver is None:
@@ -155,7 +156,9 @@ class YamahaZoneEntity(CoordinatorEntity[YamahaUpdateCoordinator], MediaPlayerEn
 
         min_volume = -805
         max_volume = 165
-        new_volume = round(min_volume + (max_volume - min_volume) * volume_level)
+        new_volume = round(min_volume + (max_volume - min_volume) * kwargs.get("volume", 0))
+        new_volume = round_to_nearest_five(new_volume)
+        #We have to do this because the Yamaha receiver only accepts volume levels in increments of 5
         await self.zone.change_zone_volume(receiver, new_volume)
         await self.coordinator.async_request_refresh()
 
