@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET
 from .enums import *
 from .helper_functions import *
 from .protocol import *
-
+import functools
 
 class Receiver:
     valid_setup = False
@@ -115,8 +115,10 @@ class Receiver:
             elif input.name == Input_Type.RHAPSODY.name:
                 if self.rhapsody_tuner.exists:
                     self.available_inputs.append(input)
+
             else:
                 self.available_inputs.append(input)
+        self.available_inputs.sort(key=functools.cmp_to_key(input_comparator))
 
     def populate_audio_programs(self):
         for program in Audio_Setting_Type:
@@ -133,6 +135,9 @@ class Receiver:
 
             else:
                 self.available_audio_programs.append(program)
+        self.available_audio_programs.sort(key=functools.cmp_to_key(audio_setting_comparator))
+
+        #self.available_audio_programs.sort()
 
     async def change_zone_power(self, zone, desired_power_state):
         if isinstance(zone, Zone):
