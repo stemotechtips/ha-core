@@ -166,10 +166,16 @@ class Receiver:
             print("Can only pass zone and valid input to this function!")
 
     async def change_zone_audio_setting(self, zone, desired_audio_program):
+
         if isinstance(zone, Zone) and isinstance(
             desired_audio_program, Audio_Setting_Type
         ):
-            await zone.change_zone_audio_setting(self, desired_audio_program)
+            if zone.zone_name == "Main_Zone":
+
+                await zone.change_zone_audio_setting(self, desired_audio_program)
+
+            else:
+                print("Only the main zone can have an audio program!")
 
         else:
             print("Can only pass zone and valid input to this function!")
