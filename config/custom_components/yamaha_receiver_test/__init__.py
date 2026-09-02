@@ -7,7 +7,9 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
 from .coordinator import YamahaUpdateCoordinator
-from .receiver_system import Receiver
+from legacy_yamaha_receiver import Receiver
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
 
 PLATFORMS = [Platform.MEDIA_PLAYER, Platform.SENSOR]
 
@@ -15,7 +17,9 @@ PLATFORMS = [Platform.MEDIA_PLAYER, Platform.SENSOR]
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up the Yamaha receiver test integration from a config entry."""
     receiver_url = f"http://{entry.data['host']}/YamahaRemoteControl/ctrl"
-    receiver = await Receiver.async_create(hass, receiver_url)
+    session = async_get_clientsession(hass)
+
+    receiver = await Receiver.async_create(session, receiver_url)
     coordinator = YamahaUpdateCoordinator(hass, entry, receiver)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator

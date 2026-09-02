@@ -12,7 +12,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 
-class YamahaUpdateCoordinator(DataUpdateCoordinator[dict[str, object]]):
+class YamahaUpdateCoordinator(DataUpdateCoordinator[None]):
     """Coordinate Yamaha receiver zone state updates."""
 
     config_entry: ConfigEntry
@@ -27,15 +27,10 @@ class YamahaUpdateCoordinator(DataUpdateCoordinator[dict[str, object]]):
             _LOGGER,
             config_entry=config_entry,
             name="YamahaReceiverTest",
-            update_interval=timedelta(seconds=1),
+            update_interval=timedelta(seconds=5),
             always_update=True,
         )
 
-    async def _async_update_data(self) -> dict[str, object]:
+    async def _async_update_data(self) -> None:
         """Refresh the Yamaha receiver zone state."""
         await self.receiver.update_zones_statuses()
-        return {
-            "main_zone": self.receiver.main_zone,
-            "zone_two": self.receiver.zone_two,
-            "zone_three": self.receiver.zone_three,
-        }

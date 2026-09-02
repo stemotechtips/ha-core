@@ -14,10 +14,10 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from legacy_yamaha_receiver import Audio_Setting_Type, Input_Type, Zone
+from legacy_yamaha_receiver.helper_functions import round_to_nearest_five
+
 from .coordinator import YamahaUpdateCoordinator
-from .receiver_system import Zone
-from .helper_functions import *
-from .enums import *
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,11 +30,7 @@ async def async_setup_entry(
     """Set up one HA media player per Yamaha zone."""
     coordinator: YamahaUpdateCoordinator = config_entry.runtime_data
     async_add_entities(
-        [
-            YamahaZoneEntity(coordinator, "main_zone"),
-            YamahaZoneEntity(coordinator, "zone_two"),
-            YamahaZoneEntity(coordinator, "zone_three"),
-        ]
+        [YamahaZoneEntity(coordinator, zone) for zone in coordinator.receiver.zones]
     )
 
 class YamahaZoneEntity(CoordinatorEntity[YamahaUpdateCoordinator], MediaPlayerEntity):
@@ -51,20 +47,19 @@ class YamahaZoneEntity(CoordinatorEntity[YamahaUpdateCoordinator], MediaPlayerEn
         #| MediaPlayerEntityFeature.SELECT_SOUND_MODE
     )
 
-    def __init__(self, coordinator: YamahaUpdateCoordinator, zone_key: str) -> None:
+    def __init__(self, coordinator: YamahaUpdateCoordinator, zone: Zone) -> None:
         """Initialize the zone entity."""
         super().__init__(coordinator)
-        self._zone_key = zone_key
-        self._zone: Zone = coordinator.data[zone_key]
-        self._attr_name = self._zone.zone_name.replace("_", " ")
-        self._attr_unique_id = self._zone.zone_id
-        if self._zone.zone_name == "Main_Zone":
+        self._zone = zone
+        self._attr_name = zone.zone_name.replace("_", " ")
+        self._attr_unique_id = zone.zone_id
+        if zone.zone_name == "Main_Zone":
             self._attr_supported_features = self._attr_supported_features | MediaPlayerEntityFeature.SELECT_SOUND_MODE
 
     @property
     def zone(self) -> Zone:
         """Return the underlying Yamaha zone."""
-        return self.coordinator.data[self._zone_key]
+        return self._zone
 
     @property
     def receiver_ip(self) -> str:
@@ -157,14 +152,14 @@ class YamahaZoneEntity(CoordinatorEntity[YamahaUpdateCoordinator], MediaPlayerEn
         """Turn on the zone."""
         receiver = self.receiver
         if receiver is not None:
-            await self.zone.change_zone_power(receiver, True)
+            await receiver.change_zone_power(self.zone, True)
             await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs):
         """Turn off the zone."""
         receiver = self.receiver
         if receiver is not None:
-            await self.zone.change_zone_power(receiver, False)
+            await receiver.change_zone_power(self.zone, False)
             await self.coordinator.async_request_refresh()
 
     async def async_set_volume_level(self, **kwargs) -> None:
@@ -178,7 +173,7 @@ class YamahaZoneEntity(CoordinatorEntity[YamahaUpdateCoordinator], MediaPlayerEn
         new_volume = round(min_volume + (max_volume - min_volume) * kwargs.get("volume", 0))
         new_volume = round_to_nearest_five(new_volume)
         #We have to do this because the Yamaha receiver only accepts volume levels in increments of 5
-        await self.zone.change_zone_volume(receiver, new_volume)
+        await receiver.change_zone_volume(self.zone, new_volume)
         await self.coordinator.async_request_refresh()
 
     async def async_set_volume_mute(self, mute: bool) -> None:
@@ -187,7 +182,7 @@ class YamahaZoneEntity(CoordinatorEntity[YamahaUpdateCoordinator], MediaPlayerEn
         zone = self.zone
         if receiver is not None and zone is not None:
             try:
-                await zone.change_zone_mute(receiver, mute)
+                await receiver.change_zone_mute(zone, mute)
                 await self.coordinator.async_request_refresh()
             except Exception as err:
                 _LOGGER.error("Failed to set mute: %s", err)
@@ -221,7 +216,7 @@ class YamahaZoneEntity(CoordinatorEntity[YamahaUpdateCoordinator], MediaPlayerEn
         #        break
 
         if Input_Type(source) is not None:
-            await self.zone.change_zone_input(receiver, Input_Type(source))
+            await receiver.change_zone_input(self.zone, Input_Type(source))
             await self.coordinator.async_request_refresh()
         else:
             print(f"Source {source} not found in available inputs")
@@ -244,7 +239,9 @@ class YamahaZoneEntity(CoordinatorEntity[YamahaUpdateCoordinator], MediaPlayerEn
             Audio_Setting_Type(sound_mode)
 
             if Audio_Setting_Type(sound_mode) is not None:
-                await self.zone.change_zone_audio_setting(receiver, Audio_Setting_Type(sound_mode))
+                await receiver.change_zone_audio_setting(
+                    self.zone, Audio_Setting_Type(sound_mode)
+                )
                 await self.coordinator.async_request_refresh()
             else:
                 print(f"Sound mode {sound_mode} not found in available programs")
